@@ -1,9 +1,13 @@
 {
     "remote.WSL.downloadInBackground": false,
      "[cuda-cpp]": {
-        "editor.defaultFormatter": "ebextensions.clang-format-2025",
+        "editor.defaultFormatter": "ms-vscode.cpptools",
         "editor.formatOnSave": true
     },
-    "clang-format.executable": "E:\\clang-format\\clang-format.exe",
     "editor.formatOnSave": true,
+    "files.autoSave": "afterDelay",
+    "C_Cpp.formatting": "clangFormat",
+    "C_Cpp.clang_format_style": "file",
+    "C_Cpp.clang_format_fallbackStyle": "Google",
+    "C_Cpp.clang_format_path": "/usr/bin/clang-format",
 }
