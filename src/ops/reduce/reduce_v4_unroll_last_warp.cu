@@ -3,39 +3,36 @@
 
 #define THREADS_PER_BLOCK 256
 
-__global__ void reduce(float *d_input, float *d_output) {
-    float *input_begin = d_input + blockIdx.x * blockDim.x;
-    for (int i = 1; i < blockDim.x; i *= 2) {
-        if (threadIdx.x % (i * 2) == 0) {
-            input_begin[threadIdx.x] += input_begin[threadIdx.x + i];
-        }
-        __syncthreads();
-    }
-    if (threadIdx.x == 0) {
-        d_output[blockIdx.x] = input_begin[0];
-    }
-
-    // if (threadIdx.x == 0 or 2 or 4 or 6) {
-    //     input_begin[threadIdx.x] += input_begin[threadIdx.x + 1];
-    // }
-    // if (threadIdx.x == 0 or 4) {
-    //     input_begin[threadIdx.x] += input_begin[threadIdx.x + 2];
-    // }
-    // if (threadIdx.x == 0) {
-    //     input_begin[threadIdx.x] += input_begin[threadIdx.x + 4];
-    // }
+__device__ void warpReduce(volatile float *cache, int tid) {
+    cache[tid] += cache[tid + 32];
+    cache[tid] += cache[tid + 16];
+    cache[tid] += cache[tid + 8];
+    cache[tid] += cache[tid + 4];
+    cache[tid] += cache[tid + 2];
+    cache[tid] += cache[tid + 1];
 }
 
-__global__ void reduce2(float *d_input, float *d_output) {
-    unsigned int index = blockDim.x * blockIdx.x + threadIdx.x;
-    for (int i = 1; i < blockDim.x; i *= 2) {
-        if (threadIdx.x % (i * 2) == 0) {
-            d_input[index] += d_input[index + i];
+__global__ void reduce(float *d_input, float *d_output) {
+    __shared__ float sdata[THREADS_PER_BLOCK];
+    unsigned int index = blockIdx.x * (blockDim.x * 2) + threadIdx.x;
+    unsigned int tid = threadIdx.x;
+
+    sdata[tid] = d_input[index] + d_input[index + blockDim.x];
+    __syncthreads();
+
+    for (unsigned int s = blockDim.x / 2; s > 32; s >>= 1) {
+        if (tid < s) {
+            sdata[tid] += sdata[tid + s];
         }
         __syncthreads();
     }
-    if (threadIdx.x == 0) {
-        d_output[blockIdx.x] = d_input[index];
+
+    if(tid < 32){
+        warpReduce(sdata, tid);
+    }
+
+    if (tid == 0) {
+        d_output[blockIdx.x] = sdata[0];
     }
 }
 
@@ -54,8 +51,8 @@ int main() {
     float *d_input;
     cudaMalloc((void **)&d_input, N * sizeof(float));
 
-    int block_num = (N + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
-    // Allocate one float per block, each block produces one result
+    int block_num = ((N + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK) / 2;
+
     float *output = (float *)malloc(block_num * sizeof(float));
     float *d_output;
     cudaMalloc((void **)&d_output, block_num * sizeof(float));
@@ -70,8 +67,8 @@ int main() {
     float *result = (float *)malloc(block_num * sizeof(float));
     for (int i = 0; i < block_num; ++i) {
         float cur = 0;
-        for (int j = 0; j < THREADS_PER_BLOCK; ++j) {
-            cur += input[i * THREADS_PER_BLOCK + j];
+        for (int j = 0; j < 2 * THREADS_PER_BLOCK; ++j) {
+            cur += input[i * 2 * THREADS_PER_BLOCK + j];
         }
         result[i] = cur;
     }

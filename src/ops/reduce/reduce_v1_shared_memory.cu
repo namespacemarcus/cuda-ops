@@ -4,19 +4,22 @@
 #define THREADS_PER_BLOCK 256
 
 __global__ void reduce(float *d_input, float *d_output) {
-    __shared__ float shared[THREADS_PER_BLOCK];
-    float *input_begin = d_input + blockIdx.x * blockDim.x;
-    shared[threadIdx.x] = input_begin[threadIdx.x];
-    __syncthreads();
+    __shared__ float sdata[THREADS_PER_BLOCK];
 
-    for (int i = 1; i < blockDim.x; i *= 2) {
-        if (threadIdx.x % (i * 2) == 0) {
-            shared[threadIdx.x] += shared[threadIdx.x + i];
+    unsigned int tid = threadIdx.x;
+    unsigned int index = blockIdx.x * blockDim.x + tid;
+    sdata[tid] = d_input[index];
+    __syncthreads();
+#
+    for (unsigned int s = 1; s < blockDim.x; s *= 2) {
+        if (tid % (2 * s) == 0) {
+            sdata[tid] += sdata[tid + s];
         }
         __syncthreads();
     }
-    if (threadIdx.x == 0) {
-        d_output[blockIdx.x] = shared[0];
+
+    if (tid == 0) {
+        d_output[blockIdx.x] = sdata[0];
     }
 }
 
@@ -36,7 +39,7 @@ int main() {
     cudaMalloc((void **)&d_input, N * sizeof(float));
 
     int block_num = (N + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
-    // 为每个块分配一个float即可，每个块产生一个结果
+
     float *output = (float *)malloc(block_num * sizeof(float));
     float *d_output;
     cudaMalloc((void **)&d_output, block_num * sizeof(float));
