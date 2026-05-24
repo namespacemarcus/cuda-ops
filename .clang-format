@@ -43,7 +43,8 @@ AlignConsecutiveShortCaseStatements:
   AcrossEmptyLines: false
   AcrossComments: false
   AlignCaseColons: false
-AlignEscapedNewlines: DontAlign
+AlignEscapedNewlines: Right
+AlignBackslashesAtColumn: -1
 RequiresClausePosition: OwnLine
 BreakBeforeConceptDeclarations: Always
 IndentAccessModifiers: false
@@ -74,7 +75,6 @@ SpaceBeforeCtorInitializerColon: true
 SpaceBeforeParens: ControlStatements
 SpaceInEmptyBlock: false
 AlwaysBreakTemplateDeclarations: true
-# BreakTemplateDeclarations: Yes
 SeparateDefinitionBlocks: Always
 BreakBeforeBraces: Custom
 BraceWrapping:
