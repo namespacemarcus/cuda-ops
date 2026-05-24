@@ -1,4 +1,3 @@
-#include <cuda_fp16.h>
 #include "elementwise_add.cuh"
 
 __global__ void elementwise_add_f32_kernel(float *a, float *b, float *c,
