@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cuda_fp16.h>
-#include "../../common/cuda_utils.h"
 
 __global__ void elementwise_add_f32_kernel(float *a, float *b, float *c, int N);
 __global__ void elementwise_add_f32x4_kernel(float *a, float *b, float *c,
